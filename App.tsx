@@ -17,6 +17,10 @@ import Footer from './components/Footer';
 import { getFriendlyErrorMessage } from './lib/utils';
 import Spinner from './components/Spinner';
 
+type User = {
+  name: string;
+};
+
 const POSE_INSTRUCTIONS = [
   "Chụp chính diện, tay chống hông",
   "Hơi xoay người, góc 3/4",
@@ -33,16 +37,13 @@ const useMediaQuery = (query: string): boolean => {
     const mediaQueryList = window.matchMedia(query);
     const listener = (event: MediaQueryListEvent) => setMatches(event.matches);
 
-    // DEPRECATED: mediaQueryList.addListener(listener);
     mediaQueryList.addEventListener('change', listener);
     
-    // Check again on mount in case it changed between initial state and effect runs
     if (mediaQueryList.matches !== matches) {
       setMatches(mediaQueryList.matches);
     }
 
     return () => {
-      // DEPRECATED: mediaQueryList.removeListener(listener);
       mediaQueryList.removeEventListener('change', listener);
     };
   }, [query, matches]);
@@ -52,6 +53,7 @@ const useMediaQuery = (query: string): boolean => {
 
 
 const App: React.FC = () => {
+  const [user, setUser] = useState<User | null>(null);
   const [modelImageUrl, setModelImageUrl] = useState<string | null>(null);
   const [outfitHistory, setOutfitHistory] = useState<OutfitLayer[]>([]);
   const [currentOutfitIndex, setCurrentOutfitIndex] = useState(0);
@@ -79,8 +81,6 @@ const App: React.FC = () => {
     if (!currentLayer) return modelImageUrl;
 
     const poseInstruction = POSE_INSTRUCTIONS[currentPoseIndex];
-    // Return the image for the current pose, or fallback to the first available image for the current layer.
-    // This ensures an image is shown even while a new pose is generating.
     return currentLayer.poseImages[poseInstruction] ?? Object.values(currentLayer.poseImages)[0];
   }, [outfitHistory, currentOutfitIndex, currentPoseIndex, modelImageUrl]);
 
@@ -111,14 +111,22 @@ const App: React.FC = () => {
     setWardrobe(defaultWardrobe);
   };
 
+  const handleLogin = () => {
+    setUser({ name: 'Người dùng' });
+  };
+
+  const handleLogout = () => {
+    setUser(null);
+    handleStartOver(); // Full reset on logout
+  };
+
   const handleGarmentSelect = useCallback(async (garmentFile: File, garmentInfo: WardrobeItem) => {
     if (!displayImageUrl || isLoading) return;
 
-    // Caching: Check if we are re-applying a previously generated layer
     const nextLayer = outfitHistory[currentOutfitIndex + 1];
     if (nextLayer && nextLayer.garment?.id === garmentInfo.id) {
         setCurrentOutfitIndex(prev => prev + 1);
-        setCurrentPoseIndex(0); // Reset pose when changing layer
+        setCurrentPoseIndex(0);
         return;
     }
 
@@ -136,13 +144,11 @@ const App: React.FC = () => {
       };
 
       setOutfitHistory(prevHistory => {
-        // Cut the history at the current point before adding the new layer
         const newHistory = prevHistory.slice(0, currentOutfitIndex + 1);
         return [...newHistory, newLayer];
       });
       setCurrentOutfitIndex(prev => prev + 1);
       
-      // Add to personal wardrobe if it's not already there
       setWardrobe(prev => {
         if (prev.find(item => item.id === garmentInfo.id)) {
             return prev;
@@ -160,7 +166,7 @@ const App: React.FC = () => {
   const handleRemoveLastGarment = () => {
     if (currentOutfitIndex > 0) {
       setCurrentOutfitIndex(prevIndex => prevIndex - 1);
-      setCurrentPoseIndex(0); // Reset pose to default when removing a layer
+      setCurrentPoseIndex(0);
     }
   };
   
@@ -170,23 +176,19 @@ const App: React.FC = () => {
     const poseInstruction = POSE_INSTRUCTIONS[newIndex];
     const currentLayer = outfitHistory[currentOutfitIndex];
 
-    // If pose already exists, just update the index to show it.
     if (currentLayer.poseImages[poseInstruction]) {
       setCurrentPoseIndex(newIndex);
       return;
     }
 
-    // Pose doesn't exist, so generate it.
-    // Use an existing image from the current layer as the base.
     const baseImageForPoseChange = Object.values(currentLayer.poseImages)[0];
-    if (!baseImageForPoseChange) return; // Should not happen
+    if (!baseImageForPoseChange) return;
 
     setError(null);
     setIsLoading(true);
     setLoadingMessage(`Đang đổi dáng...`);
     
     const prevPoseIndex = currentPoseIndex;
-    // Optimistically update the pose index so the pose name changes in the UI
     setCurrentPoseIndex(newIndex);
 
     try {
@@ -199,7 +201,6 @@ const App: React.FC = () => {
       });
     } catch (err) {
       setError(getFriendlyErrorMessage(err, 'Không thể đổi dáng'));
-      // Revert pose index on failure
       setCurrentPoseIndex(prevPoseIndex);
     } finally {
       setIsLoading(false);
@@ -226,7 +227,11 @@ const App: React.FC = () => {
             exit="exit"
             transition={{ duration: 0.5, ease: 'easeInOut' }}
           >
-            <StartScreen onModelFinalized={handleModelFinalized} />
+            <StartScreen
+              onModelFinalized={handleModelFinalized}
+              user={user}
+              onLogin={handleLogin}
+            />
           </motion.div>
         ) : (
           <motion.div
@@ -249,6 +254,7 @@ const App: React.FC = () => {
                   poseInstructions={POSE_INSTRUCTIONS}
                   currentPoseIndex={currentPoseIndex}
                   availablePoseKeys={availablePoseKeys}
+                  onLogout={handleLogout}
                 />
               </div>
 

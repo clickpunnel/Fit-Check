@@ -5,7 +5,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { UploadCloudIcon } from './icons';
+import { UploadCloudIcon, GoogleIcon } from './icons';
 import { Compare } from './ui/compare';
 import { generateModelImage } from '../services/geminiService';
 import Spinner from './Spinner';
@@ -13,9 +13,11 @@ import { getFriendlyErrorMessage } from '../lib/utils';
 
 interface StartScreenProps {
   onModelFinalized: (modelUrl: string) => void;
+  user: { name: string } | null;
+  onLogin: () => void;
 }
 
-const StartScreen: React.FC<StartScreenProps> = ({ onModelFinalized }) => {
+const StartScreen: React.FC<StartScreenProps> = ({ onModelFinalized, user, onLogin }) => {
   const [userImageUrl, setUserImageUrl] = useState<string | null>(null);
   const [generatedModelUrl, setGeneratedModelUrl] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -65,6 +67,37 @@ const StartScreen: React.FC<StartScreenProps> = ({ onModelFinalized }) => {
     animate: { opacity: 1, x: 0 },
     exit: { opacity: 0, x: 20 },
   };
+
+  if (!user) {
+    return (
+      <motion.div
+        key="login-view"
+        className="w-full max-w-md mx-auto text-center"
+        variants={screenVariants}
+        initial="initial"
+        animate="animate"
+        exit="exit"
+        transition={{ duration: 0.4, ease: "easeInOut" }}
+      >
+        <h1 className="text-5xl md:text-6xl font-serif font-bold text-gray-900 leading-tight">
+          Chào mừng bạn
+        </h1>
+        <p className="mt-4 text-lg text-gray-600">
+          Đăng nhập để bắt đầu tạo người mẫu ảo của bạn và thử những bộ trang phục yêu thích.
+        </p>
+        <button
+          onClick={onLogin}
+          className="mt-8 mx-auto w-full max-w-xs relative flex items-center justify-center px-8 py-3 text-base font-semibold text-gray-700 bg-white border border-gray-300 rounded-md cursor-pointer group hover:bg-gray-50 transition-colors"
+        >
+          <GoogleIcon className="w-6 h-6 mr-3" />
+          Đăng nhập bằng Google
+        </button>
+         <p className="text-gray-500 text-xs mt-8 max-w-sm mx-auto">
+            Bằng cách đăng nhập, bạn đồng ý không tạo nội dung có hại, khiêu dâm hoặc bất hợp pháp.
+         </p>
+      </motion.div>
+    );
+  }
 
   return (
     <AnimatePresence mode="wait">

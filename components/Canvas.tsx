@@ -16,9 +16,10 @@ interface CanvasProps {
   poseInstructions: string[];
   currentPoseIndex: number;
   availablePoseKeys: string[];
+  onLogout: () => void;
 }
 
-const Canvas: React.FC<CanvasProps> = ({ displayImageUrl, onStartOver, isLoading, loadingMessage, onSelectPose, poseInstructions, currentPoseIndex, availablePoseKeys }) => {
+const Canvas: React.FC<CanvasProps> = ({ displayImageUrl, onStartOver, isLoading, loadingMessage, onSelectPose, poseInstructions, currentPoseIndex, availablePoseKeys, onLogout }) => {
   const [isPoseMenuOpen, setIsPoseMenuOpen] = useState(false);
   
   const handlePreviousPose = () => {
@@ -27,7 +28,6 @@ const Canvas: React.FC<CanvasProps> = ({ displayImageUrl, onStartOver, isLoading
     const currentPoseInstruction = poseInstructions[currentPoseIndex];
     const currentIndexInAvailable = availablePoseKeys.indexOf(currentPoseInstruction);
     
-    // Fallback if current pose not in available list (shouldn't happen)
     if (currentIndexInAvailable === -1) {
         onSelectPose((currentPoseIndex - 1 + poseInstructions.length) % poseInstructions.length);
         return;
@@ -48,7 +48,6 @@ const Canvas: React.FC<CanvasProps> = ({ displayImageUrl, onStartOver, isLoading
     const currentPoseInstruction = poseInstructions[currentPoseIndex];
     const currentIndexInAvailable = availablePoseKeys.indexOf(currentPoseInstruction);
 
-    // Fallback or if there are no generated poses yet
     if (currentIndexInAvailable === -1 || availablePoseKeys.length === 0) {
         onSelectPose((currentPoseIndex + 1) % poseInstructions.length);
         return;
@@ -56,14 +55,12 @@ const Canvas: React.FC<CanvasProps> = ({ displayImageUrl, onStartOver, isLoading
     
     const nextIndexInAvailable = currentIndexInAvailable + 1;
     if (nextIndexInAvailable < availablePoseKeys.length) {
-        // There is another generated pose, navigate to it
         const nextPoseInstruction = availablePoseKeys[nextIndexInAvailable];
         const newGlobalPoseIndex = poseInstructions.indexOf(nextPoseInstruction);
         if (newGlobalPoseIndex !== -1) {
             onSelectPose(newGlobalPoseIndex);
         }
     } else {
-        // At the end of generated poses, generate the next one from the master list
         const newGlobalPoseIndex = (currentPoseIndex + 1) % poseInstructions.length;
         onSelectPose(newGlobalPoseIndex);
     }
@@ -71,20 +68,29 @@ const Canvas: React.FC<CanvasProps> = ({ displayImageUrl, onStartOver, isLoading
   
   return (
     <div className="w-full h-full flex items-center justify-center p-4 relative animate-zoom-in group">
-      {/* Start Over Button */}
-      <button 
-          onClick={onStartOver}
-          className="absolute top-4 left-4 z-30 flex items-center justify-center text-center bg-white/60 border border-gray-300/80 text-gray-700 font-semibold py-2 px-4 rounded-full transition-all duration-200 ease-in-out hover:bg-white hover:border-gray-400 active:scale-95 text-sm backdrop-blur-sm"
-      >
-          <RotateCcwIcon className="w-4 h-4 mr-2" />
-          Làm lại từ đầu
-      </button>
+      {/* Action Buttons */}
+      <div className="absolute top-4 left-4 z-30 flex items-center gap-2">
+        <button 
+            onClick={onStartOver}
+            className="flex items-center justify-center text-center bg-white/60 border border-gray-300/80 text-gray-700 font-semibold py-2 px-4 rounded-full transition-all duration-200 ease-in-out hover:bg-white hover:border-gray-400 active:scale-95 text-sm backdrop-blur-sm"
+        >
+            <RotateCcwIcon className="w-4 h-4 mr-2" />
+            Làm lại từ đầu
+        </button>
+        <button 
+          onClick={onLogout}
+          className="flex items-center justify-center text-center bg-white/60 border border-gray-300/80 text-gray-700 font-semibold py-2 px-4 rounded-full transition-all duration-200 ease-in-out hover:bg-white hover:border-gray-400 active:scale-95 text-sm backdrop-blur-sm"
+        >
+            Đăng xuất
+        </button>
+      </div>
+
 
       {/* Image Display or Placeholder */}
       <div className="relative w-full h-full flex items-center justify-center">
         {displayImageUrl ? (
           <img
-            key={displayImageUrl} // Use key to force re-render and trigger animation on image change
+            key={displayImageUrl}
             src={displayImageUrl}
             alt="Virtual try-on model"
             className="max-w-full max-h-full object-contain transition-opacity duration-500 animate-fade-in rounded-lg"
@@ -120,7 +126,6 @@ const Canvas: React.FC<CanvasProps> = ({ displayImageUrl, onStartOver, isLoading
           onMouseEnter={() => setIsPoseMenuOpen(true)}
           onMouseLeave={() => setIsPoseMenuOpen(false)}
         >
-          {/* Pose popover menu */}
           <AnimatePresence>
               {isPoseMenuOpen && (
                   <motion.div

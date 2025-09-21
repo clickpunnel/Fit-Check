@@ -35,12 +35,12 @@ const Footer: React.FC<FooterProps> = ({ isOnDressingScreen = false }) => {
         <p>
           Tạo bởi{' '}
           <a 
-            href="https://x.com/ammaar" 
+            href="https://clickpunnel.com" 
             target="_blank" 
             rel="noopener noreferrer"
             className="font-semibold text-gray-800 hover:underline"
           >
-            @ammaar
+            clickpunnel
           </a>
         </p>
         <div className="h-4 mt-1 sm:mt-0 flex items-center overflow-hidden">
