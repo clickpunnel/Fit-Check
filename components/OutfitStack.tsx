@@ -5,14 +5,17 @@
 
 import React from 'react';
 import { OutfitLayer } from '../types';
-import { Trash2Icon } from './icons';
+import { Trash2Icon, SaveIcon } from './icons';
 
 interface OutfitStackProps {
   outfitHistory: OutfitLayer[];
   onRemoveLastGarment: () => void;
+  onSaveOutfit: () => void;
 }
 
-const OutfitStack: React.FC<OutfitStackProps> = ({ outfitHistory, onRemoveLastGarment }) => {
+const OutfitStack: React.FC<OutfitStackProps> = ({ outfitHistory, onRemoveLastGarment, onSaveOutfit }) => {
+  const canSave = outfitHistory.length > 1;
+
   return (
     <div className="flex flex-col">
       <h2 className="text-xl font-serif tracking-wider text-gray-800 border-b border-gray-400/50 pb-2 mb-3">Trang phục đã chọn</h2>
@@ -48,6 +51,16 @@ const OutfitStack: React.FC<OutfitStackProps> = ({ outfitHistory, onRemoveLastGa
             <p className="text-center text-sm text-gray-500 pt-4">Các món đồ bạn chọn sẽ hiện ở đây. Chọn một món từ tủ đồ bên dưới.</p>
         )}
       </div>
+
+      {canSave && (
+        <button
+          onClick={onSaveOutfit}
+          className="mt-4 w-full flex items-center justify-center text-center bg-gray-900 text-white font-semibold py-2.5 px-4 rounded-lg transition-colors duration-200 ease-in-out hover:bg-gray-700 active:scale-95 text-base"
+        >
+          <SaveIcon className="w-5 h-5 mr-2" />
+          Lưu Trang Phục
+        </button>
+      )}
     </div>
   );
 };

@@ -10,12 +10,13 @@ import Canvas from './components/Canvas';
 import WardrobePanel from './components/WardrobeModal';
 import OutfitStack from './components/OutfitStack';
 import { generateVirtualTryOnImage, generatePoseVariation } from './services/geminiService';
-import { OutfitLayer, WardrobeItem } from './types';
+import { OutfitLayer, WardrobeItem, SavedOutfit } from './types';
 import { ChevronDownIcon, ChevronUpIcon } from './components/icons';
 import { defaultWardrobe } from './wardrobe';
 import Footer from './components/Footer';
 import { getFriendlyErrorMessage } from './lib/utils';
 import Spinner from './components/Spinner';
+import SavedOutfitsPanel from './components/SavedOutfitsPanel';
 
 type User = {
   name: string;
@@ -63,7 +64,19 @@ const App: React.FC = () => {
   const [currentPoseIndex, setCurrentPoseIndex] = useState(0);
   const [isSheetCollapsed, setIsSheetCollapsed] = useState(false);
   const [wardrobe, setWardrobe] = useState<WardrobeItem[]>(defaultWardrobe);
+  const [savedOutfits, setSavedOutfits] = useState<SavedOutfit[]>([]);
   const isMobile = useMediaQuery('(max-width: 767px)');
+  
+  useEffect(() => {
+    try {
+      const storedOutfits = localStorage.getItem('saved_outfits');
+      if (storedOutfits) {
+        setSavedOutfits(JSON.parse(storedOutfits));
+      }
+    } catch (e) {
+      console.error("Failed to load saved outfits from localStorage", e);
+    }
+  }, []);
 
   const activeOutfitLayers = useMemo(() => 
     outfitHistory.slice(0, currentOutfitIndex + 1), 
@@ -117,7 +130,7 @@ const App: React.FC = () => {
 
   const handleLogout = () => {
     setUser(null);
-    handleStartOver(); // Full reset on logout
+    handleStartOver();
   };
 
   const handleGarmentSelect = useCallback(async (garmentFile: File, garmentInfo: WardrobeItem) => {
@@ -208,6 +221,38 @@ const App: React.FC = () => {
     }
   }, [currentPoseIndex, outfitHistory, isLoading, currentOutfitIndex]);
 
+  const handleSaveOutfit = () => {
+    if (!displayImageUrl || activeOutfitLayers.length <= 1) return;
+
+    const lastGarment = activeOutfitLayers[activeOutfitLayers.length - 1].garment;
+    const newSavedOutfit: SavedOutfit = {
+      id: Date.now().toString(),
+      name: `Trang phục với ${lastGarment?.name || 'Món đồ mới'}`,
+      layers: activeOutfitLayers,
+      previewUrl: displayImageUrl,
+    };
+    
+    const updatedSavedOutfits = [...savedOutfits, newSavedOutfit];
+    setSavedOutfits(updatedSavedOutfits);
+    localStorage.setItem('saved_outfits', JSON.stringify(updatedSavedOutfits));
+  };
+
+  const handleLoadOutfit = (outfitId: string) => {
+    const outfitToLoad = savedOutfits.find(o => o.id === outfitId);
+    if (outfitToLoad) {
+      setOutfitHistory(outfitToLoad.layers);
+      setCurrentOutfitIndex(outfitToLoad.layers.length - 1);
+      setCurrentPoseIndex(0);
+      setError(null);
+    }
+  };
+
+  const handleDeleteOutfit = (outfitId: string) => {
+    const updatedSavedOutfits = savedOutfits.filter(o => o.id !== outfitId);
+    setSavedOutfits(updatedSavedOutfits);
+    localStorage.setItem('saved_outfits', JSON.stringify(updatedSavedOutfits));
+  };
+
   const viewVariants = {
     initial: { opacity: 0, y: 15 },
     animate: { opacity: 1, y: 0 },
@@ -279,12 +324,19 @@ const App: React.FC = () => {
                     <OutfitStack 
                       outfitHistory={activeOutfitLayers}
                       onRemoveLastGarment={handleRemoveLastGarment}
+                      onSaveOutfit={handleSaveOutfit}
                     />
                     <WardrobePanel
                       onGarmentSelect={handleGarmentSelect}
                       activeGarmentIds={activeGarmentIds}
                       isLoading={isLoading}
                       wardrobe={wardrobe}
+                    />
+                    <SavedOutfitsPanel
+                      savedOutfits={savedOutfits}
+                      onLoadOutfit={handleLoadOutfit}
+                      onDeleteOutfit={handleDeleteOutfit}
+                      isLoading={isLoading}
                     />
                   </div>
               </aside>
